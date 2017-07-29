@@ -2,8 +2,8 @@
   (:require [clojure.test :refer :all]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]
-            [clj-bencode.decoder :as decoder]))
+            [clojure.test.check.properties :as prop])
+  (:use clj-bencode.protocol))
 
 ; HELPERS
 
@@ -12,14 +12,18 @@
                      (string? obj) :string
                      (number? obj) :number)))
 
+
 (defmethod encode :string [string]
   (str (.length string) \: string))
+
 
 (defmethod encode :number [number]
   (str \i number \e))
 
+
 (defmethod encode :default [obj]
   (throw (IllegalArgumentException. (str "Can't encode object of type " (type obj)))))
+
 
 (defn encode-list [vector]
   (apply str (concat [\l] (map encode vector) [\e])))
@@ -32,6 +36,7 @@
 (def int-and-encoded
   (gen/bind gen/int
             (fn [integer] (gen/tuple (gen/return integer) (gen/return (str \i integer \e))))))
+
 
 ; generator that generates a list of 2 element vectors, where first element is string
 ; and second lement is bencoded string
@@ -47,33 +52,50 @@
   (gen/bind (gen/vector gen/int)
             (fn [vector] (gen/tuple (gen/return vector) (gen/return (encode-list vector))))))
 
+; generator that generates a list of 2 element vectors, where first element is a vector of random string
+; and second lement is bencoded string
+
+(def list-of-strings-and-encoded
+  (gen/bind (gen/vector gen/string)
+            (fn [vector] (gen/tuple (gen/return vector) (gen/return (encode-list vector))))))
+
 ; PROPERTIES
 
 (def can-decode-integers
   (prop/for-all [pair int-and-encoded]
                 (let [[integer bencoded] pair]
-                  (= integer (decoder/decode-from-string bencoded)))))
+                  (= integer (bdecode bencoded)))))
 
-(tc/quick-check 1000 can-decode-integers)
 
 (def can-decode-strings
   (prop/for-all [pair string-and-encoded]
                 (let [[string bencoded] pair]
-                  (= string (decoder/decode-from-string bencoded)))))
+                  (= string (bdecode bencoded)))))
 
-(tc/quick-check 1000 can-decode-strings)
 
 (def can-decode-list-of-integers
   (prop/for-all [pair list-of-ints-and-encoded]
                 (let [[vector encoded] pair]
-                  (= vector (decoder/decode-from-string encoded)))))
+                  (= vector (bdecode encoded)))))
 
 
-(tc/quick-check 1000 can-decode-list-of-integers)
+(def can-decode-list-of-strings
+  (prop/for-all [pair list-of-strings-and-encoded]
+                (let [[vector encoded] pair]
+                  (= vector (bdecode encoded)))))
 
+
+(defn run-generative-tests [n]
+  (tc/quick-check n can-decode-integers)
+  (tc/quick-check n can-decode-strings)
+  (tc/quick-check n can-decode-list-of-integers)
+  (tc/quick-check n can-decode-list-of-strings))
+
+(run-generative-tests 1000)
 
 ;(gen/sample (gen/vector encoded-int))
 ;(gen/sample encoded-string)
 ;(gen/sample int-and-encoded)
 ;(gen/sample string-and-encoded)
 ;(gen/sample list-of-ints-and-encoded)
+;(gen/sample list-of-strings-and-encoded)

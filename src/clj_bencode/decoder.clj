@@ -1,74 +1,47 @@
 (ns clj-bencode.decoder
-  (:import (java.io InputStream InputStreamReader ByteArrayInputStream)))
+  (:require [clj-bencode.util :as util])
+  (:import (java.io InputStreamReader ByteArrayInputStream BufferedReader)))
 
-
-(declare decode decode-string decode-number decode-list decode-dict)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PUBLIC INTERFACE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+(comment
 (defn decode-from-string
   "Decodes bencoded strings"
   [string]
-  (decode (ByteArrayInputStream. (.getBytes string "UTF-8"))))
+  (decode (BufferedReader. (InputStreamReader. (ByteArrayInputStream. (.getBytes string "UTF-8")))))))
 
 
-(defn decode [^InputStream s]
-  (let [next (read-and-return s) ch (char next)]
+(defn decode [^BufferedReader r]
+  (let [next (util/read-and-return r) ch (char next)]
     (cond
-      (digit? next) (decode-string s)
-      (= ch \i) (do (skip s) (decode-number s \e))
-      (= ch \l) (do (skip s) (decode-list s))
-      (= ch \d) (do (skip s) (decode-dict s)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRIVATE FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn- digit?
-  "Returns whether byte b is a digit, e.g., value between 0 and 9."
-  [b]
-  (and (>= b 48) (<= b 57)))
+      (util/digit? next) (decode-string r)
+      (= ch \i) (do (.skip r 1) (decode-number r \e))
+      (= ch \l) (do (.skip r 1) (decode-list r))
+      (= ch \d) (do (.skip r 1) (decode-dict r)))))
 
 
-(defn- read-and-return
-  "Read a byte from the stream, put it back on the strem and return the byte"
-  [^InputStream s]
-  (do
-    (.mark s 1)
-    (let [byte (.read s)]
-      (.reset s)
-      byte)))
-
-
-(defn- skip
-  "Just consume one byte from the stream"
-  [^InputStream s]
-  (.read s))
-
-
-(defn- decode-number [^InputStream s delim]
-  (loop [next (.read s) result ""]
+(defn- decode-number [^BufferedReader r delim]
+  (loop [next (.read r) result ""]
     (if (neg? next)
       (throw (ex-info "Number not terminated correctly" {:number result :expected-delim delim}))
       (let [ch (char next)]
         (if (= ch delim)
           (BigInteger. result)
-          (recur (.read s) (str result ch)))))))
+          (recur (.read r) (str result ch)))))))
 
 
-(defn- decode-string [^InputStream s]
-  (let [len (decode-number s \:)
-        isr (InputStreamReader. s "UTF-8")
+(defn- decode-string [^BufferedReader r]
+  (let [len (decode-number r \:)
         buffer (char-array len)]
-    (.read isr buffer)
+    (.read r buffer)
     (String/valueOf buffer)))
 
 
-(defn- decode-list [^InputStream s]
+(defn- decode-list [^BufferedReader r]
   (loop [result []]
-    (let [next (read-and-return s)]
+    (let [next (util/read-and-return r)]
       (if (= (char next) \e)
         result
-        (recur (conj result (decode s)))))))
+        (recur (conj result (decode r)))))))
 
 
-(defn- decode-dict [^InputStream s]
-  (apply hash-map (decode-list s)))
+(defn- decode-dict [^BufferedReader r]
+  (apply hash-map (decode-list r)))

@@ -1,36 +1,42 @@
 (ns clj-bencode.encoder
-  (:import java.io.ByteArrayOutputStream))
+  (:import (java.io Writer StringWriter)))
 
 (defn to-string [obj]
-  (let [baos (ByteArrayOutputStream.)]
-    (encode-obj obj baos)
-    (.toString baos "UTF-8")))
+  (let [w (StringWriter.)]
+    (encode-obj obj w)
+    (.toString  w)))
 
-(defn encode-obj [obj ^ByteArrayOutputStream s]
+(defn to-file [obj file-path]
+  (let [file (clojure.java.io/file file-path)]
+    (.createNewFile file)
+    (with-open [w (clojure.java.io/writer file)]
+      (encode-obj obj w))))
+
+(defn encode-obj [obj ^Writer w]
   (cond
-    (string? obj) (encode-string obj s)
-    (number? obj) (encode-number obj s)
-    (vector? obj) (encode-list obj s)
-    (map? obj) (encode-map obj s)))
+    (string? obj) (encode-string obj w)
+    (number? obj) (encode-number obj w)
+    (vector? obj) (encode-list obj w)
+    (map? obj) (encode-map obj w)))
 
-(defn- encode-number [number ^ByteArrayOutputStream s]
+(defn- encode-number [number ^Writer w]
   (let [number-string (str \i number \e)
-        byte-array (.getBytes number-string "UTF-8")]
-    (.write s byte-array 0 (.length number-string))))
+        ch-array (.toCharArray number-string)]
+    (.write w ch-array 0 (.length number-string))))
 
-(defn- encode-string [st ^ByteArrayOutputStream s]
+(defn- encode-string [st ^Writer w]
   (let [new-str (str (.length st) \: st)
-        byte-array (.getBytes new-str "UTF-8")]
-    (.write s byte-array 0 (.length new-str))))
+        ch-array (.toCharArray new-str)]
+    (.write w ch-array 0 (.length new-str))))
 
-(defn- encode-list [v ^ByteArrayOutputStream s]
-  (.write s (int \l))
+(defn- encode-list [v ^Writer w]
+  (.write w (int \l))
   (doseq [obj v]
-    (encode-obj obj s))
-  (.write s (int \e)))
+    (encode-obj obj w))
+  (.write w (int \e)))
 
-(defn- encode-map [m ^ByteArrayOutputStream s]
-  (.write s (int \d))
+(defn- encode-map [m ^Writer w]
+  (.write w (int \d))
   (doseq [obj (flatten (seq m))]
-    (encode-obj obj s))
-  (.write s (int \e)))
+    (encode-obj obj w))
+  (.write w (int \e)))
