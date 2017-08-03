@@ -2,12 +2,11 @@
   (:require [clj-bencode.util :as util])
   (:import (java.io InputStreamReader ByteArrayInputStream BufferedReader)))
 
-(comment
-(defn decode-from-string
-  "Decodes bencoded strings"
-  [string]
-  (decode (BufferedReader. (InputStreamReader. (ByteArrayInputStream. (.getBytes string "UTF-8")))))))
 
+(declare decode-string decode-number decode-list decode-dict)
+
+; (defn decode-from-string [string]
+;   (decode (BufferedReader. (InputStreamReader. (ByteArrayInputStream. (.getBytes string))))))
 
 (defn decode [^BufferedReader r]
   (let [next (util/read-and-return r) ch (char next)]
@@ -39,7 +38,9 @@
   (loop [result []]
     (let [next (util/read-and-return r)]
       (if (= (char next) \e)
-        result
+        (do
+          (.skip r 1)
+          result)
         (recur (conj result (decode r)))))))
 
 
