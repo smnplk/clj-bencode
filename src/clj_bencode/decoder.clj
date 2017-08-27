@@ -2,11 +2,13 @@
   (:require [clj-bencode.util :as util])
   (:import (java.io InputStreamReader ByteArrayInputStream BufferedReader)))
 
+(declare decode decode-number decode-string decode-list decode-dict)
 
-(declare decode-string decode-number decode-list decode-dict)
 
-; (defn decode-from-string [string]
-;   (decode (BufferedReader. (InputStreamReader. (ByteArrayInputStream. (.getBytes string))))))
+(defn decode-file [path]
+  (let [reader (clojure.java.io/reader path)]
+    (decode reader)))
+
 
 (defn decode [^BufferedReader r]
   (let [next (util/read-and-return r) ch (char next)]
@@ -37,7 +39,7 @@
 (defn- decode-list [^BufferedReader r]
   (loop [result []]
     (let [next (util/read-and-return r)]
-      (if (= (char next) \e)
+      (if (or (neg? next) (= (char next) \e))
         (do
           (.skip r 1)
           result)

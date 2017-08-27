@@ -1,6 +1,8 @@
 (ns clj-bencode.encoder
   (:import (java.io Writer StringWriter)))
 
+(declare encode-obj encode-string encode-number encode-map encode-list)
+
 (defn to-string [obj]
   (let [w (StringWriter.)]
     (encode-obj obj w)

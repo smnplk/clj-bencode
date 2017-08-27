@@ -20,6 +20,8 @@
 
 ; PROPERTIES
 
+;(helpers/encode 10)
+
 (def can-decode-integers
   (prop/for-all [i gen/int]
                 (= i (bdecode (helpers/encode i)))))

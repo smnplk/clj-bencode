@@ -1,7 +1,6 @@
 (ns clj-bencode.util
   (:import java.io.BufferedReader))
 
-
 (defn digit?
   "Returns whether byte b is a digit, e.g., value between 0 and 9."
   [b]

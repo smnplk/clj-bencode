@@ -1,5 +1,7 @@
 (ns clj-bencode.helpers)
 
+(declare encode-map encode-list)
+
 (defmulti encode (fn [obj]
                    (cond
                      (string? obj)      :string
@@ -35,3 +37,5 @@
 (defn encode-map [m]
   (let [v (apply concat (into [] m))]
     (apply str (concat [\d] (mapv encode v) [\e]))))
+
+
