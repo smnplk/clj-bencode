@@ -7,21 +7,6 @@
   (:use clj-bencode.protocol))
 
 
-; Recursive generator for nested maps, keys are always strings, but values can be integers, strings,
-; vectors (of ints or strings ) or maps
-
-(def compound-gen-map (fn [inner-gen]
-                        (gen/map (gen/not-empty  gen/string) inner-gen)))
-
-(def values (gen/one-of [gen/string gen/int
-                        (gen/vector (gen/one-of [(gen/not-empty gen/string) gen/int]))]))
-
-(def nested-map (gen/recursive-gen compound-gen-map values))
-
-; PROPERTIES
-
-;(helpers/encode 10)
-
 (def can-decode-integers
   (prop/for-all [i gen/int]
                 (= i (bdecode (helpers/encode i)))))
@@ -46,11 +31,11 @@
                 (= str-map (bdecode (helpers/encode str-map)))))
 
 (def can-decode-nested-maps
-  (prop/for-all [m nested-map]
+  (prop/for-all [m helpers/nested-map]
                 (= m (bdecode (helpers/encode m)))))
 
 
-(defn run-generative-tests [n]
+(defn run-decoding-tests [n]
   (tc/quick-check n can-decode-integers)
   (tc/quick-check n can-decode-strings)
   (tc/quick-check n can-decode-list-of-integers)
@@ -58,7 +43,7 @@
   (tc/quick-check n can-decode-map-of-string-to-string)
   (tc/quick-check n can-decode-nested-maps))
 
-(run-generative-tests 100)
+;(run-decoding-tests 100)
 
 ;(gen/sample (gen/vector encoded-int))
 ;(gen/sample encoded-string)

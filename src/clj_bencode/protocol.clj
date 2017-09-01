@@ -6,16 +6,20 @@
 (defprotocol IDecode
   (bdecode [this]))
 
+
 (defprotocol IDecodeFile
   (bdecode-file [this]))
+
 
 (defprotocol IEncode
   (bencode [this] [this file-path]))
 
+
 (extend-type String
   IDecode
-
+  (bdecode [this]
     (decoder/decode (BufferedReader. (InputStreamReader. (ByteArrayInputStream. (.getBytes this)))))))
+
 
 (extend-type String
   IDecodeFile
@@ -30,22 +34,32 @@
               ([this file-path]
                (encoder/to-file this file-path)))})
 
+
 (extend java.lang.String
   IEncode
   base-encoder-impl)
+
 
 (extend java.lang.Integer
   IEncode
   base-encoder-impl)
 
+
 (extend java.lang.Long
   IEncode
   base-encoder-impl)
+
 
 (extend clojure.lang.PersistentVector
   IEncode
   base-encoder-impl)
 
+
 (extend clojure.lang.PersistentArrayMap
+  IEncode
+  base-encoder-impl)
+
+
+(extend clojure.lang.PersistentHashMap
   IEncode
   base-encoder-impl)

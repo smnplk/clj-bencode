@@ -1,4 +1,18 @@
-(ns clj-bencode.helpers)
+(ns clj-bencode.helpers
+  (:require [clojure.test.check.generators :as gen]))
+
+
+; Recursive generator for nested maps, keys are always strings, but values can be integers, strings,
+; vectors (of ints or strings ) or maps
+
+(def compound-gen-map (fn [inner-gen]
+                        (gen/map (gen/not-empty  gen/string) inner-gen)))
+
+(def values (gen/one-of [gen/string gen/int
+                         (gen/vector (gen/one-of [(gen/not-empty gen/string) gen/int]))]))
+
+(def nested-map (gen/recursive-gen compound-gen-map values))
+
 
 (declare encode-map encode-list)
 
